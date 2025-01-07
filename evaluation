@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Evaluation</title>
+    <style>
+        :root {
+            --primary-color: #2a75bb;
+            --secondary-color: #ffcb05;
+            --background-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --text-muted: #999;
+            --detail-bg: #363636;
+                }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1a65ab;
+        }
+
+        .tier-box {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+        }
+
+        .card-details {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .score-breakdown li {
+            background-color: var(--detail-bg) !important;
+            border: 1px solid #444;
+            color: var(--text-color);
+        }
+
+        #evaluationDetails {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Card Evaluation</h1>
+    <div id="evaluationDetails"></div>
+
+    <button onclick="categorizeCard('attackers')">Attackers</button>
+    <button onclick="categorizeCard('sweepers')">Sweepers</button>
+    <button onclick="categorizeCard('utility')">Utility</button>
+
+    <script>
+        const evaluationData = JSON.parse(sessionStorage.getItem("evaluationData"));
+
+        if (evaluationData) {
+            const { card, score, tier, details } = evaluationData;
+            const evaluationDiv = document.getElementById('evaluationDetails');
+            evaluationDiv.innerHTML = `
+                <div style="display: grid; grid-template-columns: 300px 1fr; gap: 20px; margin-top: 20px;">
+                    <div class="card-image">
+                        <img src="${card.images.large}" alt="Card Image" style="width: 100%; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    </div>
+                    <div class="card-details">
+                        <h2>${card.name}</h2>
+                        <h3>Tier: ${tier} (Score: ${score})</h3>
+                        <div class="score-breakdown">
+                            <h4>Score Breakdown:</h4>
+                            <ul style="list-style: none; padding: 0;">
+                                ${details.map(detail => `<li style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">${detail}</li>`).join("")}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                </div>`;
+        }
+
+        
+
+        function categorizeCard(category) {
+            const { card, score, tier } = evaluationData;
+            
+            // Create categorizedCards array if it doesn't exist
+            if (typeof categorizedCards === 'undefined') {
+                window.categorizedCards = [];
+            }
+            
+            // Add the card to categorizedCards
+            categorizedCards.push({ name: card.name, score, tier, category });
+            var evaldata = ({ name: card.name, score, tier, category });
+            localStorage.setItem("categorizedCards", JSON.stringify(categorizedCards));
+            
+            // Clear session storage and redirect
+            sessionStorage.removeItem("evaluationData");
+            window.location.href = "magicmon card power ranking.html";
+        }
+
+        // Add this function to the main HTML file
+        function saveToFile(evaldata) {
+            const jsonString = JSON.stringify(evaldata, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'categorized_cards.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
+
