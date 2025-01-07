@@ -116,20 +116,31 @@
                 const data = await response.json();
                 
                 cardResults.innerHTML = "";
-        const gridContainer = document.createElement('div');
-        gridContainer.style.display = 'grid';
-        gridContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
-        gridContainer.style.gap = '20px';
-        gridContainer.style.padding = '20px';
-
-        data.data.forEach(card => {
+                const gridContainer = document.createElement('div');
+                gridContainer.style.cssText = `
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                    gap: 10px;
+                    padding: 10px;
+                    width: 100%;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                `;
+                
+                data.data.forEach(card => {
             const cardDiv = document.createElement('div');
             cardDiv.className = "card";
-            cardDiv.style.transition = 'transform 0.2s';
-            cardDiv.style.cursor = 'pointer';
+            cardDiv.style.cssText = `
+                transition: transform 0.2s;
+                cursor: pointer;
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            `;
             cardDiv.innerHTML = `
                 <img src="${card.images.small}" alt="${card.name}" style="width: 100%; border-radius: 8px;">
-                <p style="text-align: center; margin: 10px 0;">${card.name}<br><span style="color: #666;">${card.set.name}</span></p>
+                <p style="text-align: center; margin: 5px 0; font-size: 14px;">${card.name}<br><span style="color: #666;">${card.set.name}</span></p>
             `;
             cardDiv.onmouseover = () => cardDiv.style.transform = 'scale(1.05)';
             cardDiv.onmouseout = () => cardDiv.style.transform = 'scale(1)';
