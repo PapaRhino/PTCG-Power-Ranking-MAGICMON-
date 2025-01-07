@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MagicMon Card Scoring</title>
+    <style>
+        :root {
+            --primary-color: #2a75bb;
+            --secondary-color: #ffcb05;
+            --background-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --text-muted: #999;
+            --detail-bg: #363636;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1a65ab;
+        }
+
+        .tier-box {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+        }
+
+        .card-details {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .score-breakdown li {
+            background-color: var(--detail-bg) !important;
+            border: 1px solid #444;
+            color: var(--text-color);
+        }
+
+        #evaluationDetails {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>MagicMon Card Scoring</h1>
+    <p>Enter a card name and select a card to evaluate its tier.</p>
+    
+    <label for="cardName">Card Name:</label>
+    <input type="text" id="cardName" placeholder="Enter card name">
+    <button onclick="searchCards()">Search</button>
+    
+    <div id="cardResults"></div>
+    
+    <h2>Categories</h2>
+    <div class="tier-box" id="attackersBox">
+        <h3>Attackers</h3>
+        <ul id="attackersList"></ul>
+    </div>
+    <div class="tier-box" id="sweepersBox">
+        <h3>Sweepers</h3>
+        <ul id="sweepersList"></ul>
+    </div>
+    <div class="tier-box" id="utilityBox">
+        <h3>Utility</h3>
+        <ul id="utilityList"></ul>
+    </div>
+
+    <script>
+        const API_KEY = "a1f99dbe-5f6e-452f-a68a-d6b5061c43a4";
+        let categorizedCards = [];
+
+        // Load categorized cards from local storage
+        window.onload = () => {
+            const savedData = localStorage.getItem("categorizedCards");
+            if (savedData) {
+                categorizedCards = JSON.parse(savedData);
+                updateCategoryUI();
+            }
+        };
+
+        async function searchCards() {
+            const cardName = document.getElementById('cardName').value;
+            const cardResults = document.getElementById('cardResults');
+            cardResults.innerHTML = "Loading...";
+            
+            try {
+                const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:${cardName}`, {
+                    headers: { 'X-Api-Key': API_KEY }
+                });
+                const data = await response.json();
+                
+                cardResults.innerHTML = "";
+        const gridContainer = document.createElement('div');
+        gridContainer.style.display = 'grid';
+        gridContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+        gridContainer.style.gap = '20px';
+        gridContainer.style.padding = '20px';
+
+        data.data.forEach(card => {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = "card";
+            cardDiv.style.transition = 'transform 0.2s';
+            cardDiv.style.cursor = 'pointer';
+            cardDiv.innerHTML = `
+                <img src="${card.images.small}" alt="${card.name}" style="width: 100%; border-radius: 8px;">
+                <p style="text-align: center; margin: 10px 0;">${card.name}<br><span style="color: #666;">${card.set.name}</span></p>
+            `;
+            cardDiv.onmouseover = () => cardDiv.style.transform = 'scale(1.05)';
+            cardDiv.onmouseout = () => cardDiv.style.transform = 'scale(1)';
+            cardDiv.onclick = () => evaluateCard(card);
+            gridContainer.appendChild(cardDiv);
+        });
+        cardResults.appendChild(gridContainer);
+            } catch (error) {
+                cardResults.innerHTML = "Error loading cards. Please check your card name.";
+                console.error(error);
+            }
+        }
+
+        function evaluateCard(card) {
+            const retreatCost = (card.retreatCost || []).filter(cost => cost === "Colorless").length || 0;
+            const hp = parseInt(card.hp) || 0;
+            const attacks = card.attacks || [];
+            const stage = card.supertype === "Pokémon" && card.subtypes.includes("Stage 1") ? 1
+                        : card.supertype === "Pokémon" && card.subtypes.includes("Stage 2") ? 2
+                        : 0;
+            const ruleBox = card.rules ? 2 : 0;
+            const ability = card.abilities ? 1 : 0;
+
+            let score = 0;
+            let details = [];
+
+            // Summon Cost
+            const summonCost = Math.max(1, retreatCost + stage + ruleBox);
+            score += summonCost === 1 ? 3 : summonCost === 2 ? 2 : summonCost === 3 ? 1 : summonCost === 4 ? 0 : -2;
+            details.push(`Summon Cost: ${summonCost} → ${summonCost === 1 ? "+3" : summonCost === 2 ? "+2" : summonCost === 3 ? "+1" : summonCost === 4 ? "+0" : "-2"}`);
+
+            // HP
+            if (hp >= 200) {
+                score += 4;
+                details.push(`HP: ${hp} → +4 (200+ HP)`);
+            } else if (hp >= 120) {
+                score += 3;
+                details.push(`HP: ${hp} → +3 (120+ HP)`);
+            } else if (hp >= 60) {
+                score += 2;
+                details.push(`HP: ${hp} → +2 (60+ HP)`);
+            } else {
+                score -= 3;
+                details.push(`HP: ${hp} → -3 (Low HP)`);
+            }
+
+          // Attacks evaluation
+        let hasSearchOrStatus = false;
+        let hasHighDamage = false;
+        let attackScore = 0;
+
+        attacks.forEach(attack => {
+            const damage = parseInt(attack.damage) || 0;
+            const attackText = attack.text ? attack.text.toLowerCase() : '';
+            const selfDamage = attackText.includes("damage to itself");
+            const hasStatus = ["paralyzed", "poisoned", "confused", "burned", "asleep"].some(cond => 
+                attackText.includes(cond));
+            
+            
+
+            // Check for high damage
+            const noSetup = !attack.damage.includes("x") && !attack.damage.includes("+");
+            if (noSetup && damage >= 50) {
+                hasHighDamage = true;
+            }
+            
+            // GX/VSTAR Check
+            if (attack.name.includes("GX") || attack.name.includes("VSTAR")) {
+                attackScore += 3;
+                details.push(`Attack "${attack.name}": GX/VSTAR move → +3`);
+                return; // Skip other evaluations for this attack
+            }
+
+            // Self-Damage Check (only apply negative)
+            if (selfDamage) {
+                attackScore -= 2;
+                details.push(`Attack "${attack.name}": Self-damage → -2`);
+            }
+
+            // Damage + Status
+            if (damage > 1 && hasStatus) {
+                attackScore += 1;
+                details.push(`Attack "${attack.name}": Damage + Status → +1`);
+            }
+
+            // High/Mega Damage without setup
+            if (noSetup) {
+                if (damage >= 100) {
+                    attackScore += 3;
+                    details.push(`Attack "${attack.name}": Mega damage (${damage}) without setup → +3`);
+                } else if (damage >= 50) {
+                    attackScore += 2;
+                    details.push(`Attack "${attack.name}": High damage (${damage}) without setup → +2`);
+                }
+            }
+
+            // Call for Family check - with pokémon accent
+            const isCallForFamily = attackText.includes("search your deck") && 
+                                (attackText.includes("pokémon") || attackText.includes("pokemon")) && 
+                                attackText.includes("bench") && 
+                                !attackText.includes("energy");
+
+                               
+                                    
+            // Energy Ramping check
+            const isEnergyRamp = attackText.includes("attach") && 
+                                attackText.includes("energy") && 
+                                (attackText.includes("hand") || attackText.includes("deck")) &&
+                                !attackText.includes("discard");
+
+            // Check for search or status conditions
+            if (!isCallForFamily && !isEnergyRamp) {  // Only check if neither special condition was met
+            if (attackText.includes("search your deck") || hasStatus) {
+                hasSearchOrStatus = true;
+            }
+        }                    
+
+            // Special attacks scoring
+            if (isCallForFamily) {
+                attackScore += 8;
+                details.push(`Attack "${attack.name}": Call for Family effect → +8`);
+            } else if (isEnergyRamp) {
+                attackScore += 6;
+                details.push(`Attack "${attack.name}": Energy Ramping effect → +6`);
+            } else if (damage === 0 || isNaN(damage)) {
+                // Regular search/status check (only if not Call for Family or Energy Ramp)
+                if (attackText.includes("search your deck") || hasStatus) {
+                    attackScore += 4;
+                    details.push(`Attack "${attack.name}": Search/Status effect → +4`);
+                }
+            }
+        });
+            //Energy Types in attacks logic
+            //attack cost
+
+        
+
+        // Add attackScore to the total score
+        score += attackScore;
+
+        // Abilities
+        score += ability;
+        details.push(`Ability: ${ability === 1 ? "+1" : "+0"}`);
+
+        // Weakness and Resitances
+
+            // Determine Tier
+            let tier = "D";
+            if (score >= 10) tier = "S";
+            else if (score >= 8) tier = "A";
+            else if (score >= 5) tier = "B";
+            else if (score >= 3) tier = "C";
+
+            // Navigate to evaluation page
+            navigateToEvaluationPage(card, score, tier, details);
+        }
+
+        function navigateToEvaluationPage(card, score, tier, details) {
+            // Save the evaluation data temporarily in sessionStorage
+            sessionStorage.setItem("evaluationData", JSON.stringify({ card, score, tier, details }));
+
+            // Redirect to the evaluation page
+            window.location.href = "evaluation.html";
+        }
+
+        
+        
+        
+
+        // Modify the categorizeCard function to save to file
+        function categorizeCard(category, name, score, tier) {
+            categorizedCards.push({ name, score, tier, category });
+            localStorage.setItem("categorizedCards", JSON.stringify(categorizedCards));
+            saveToFile(categorizedCards);
+            updateCategoryUI();
+
+            sessionStorage.removeItem("evaluationData");
+            window.location.href = "magicmon card power ranking.html";
+        }
+
+
+        function updateCategoryUI() {
+            ["attackers", "sweepers", "utility"].forEach(category => {
+                const list = document.getElementById(`${category}List`);
+                list.innerHTML = "";
+
+                categorizedCards
+                    .filter(card => card.category === category)
+                    .forEach(card => {
+                        const li = document.createElement("li");
+                        li.textContent = `${card.name} - Tier: ${card.tier} (Score: ${card.score})`;
+                        list.appendChild(li);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
