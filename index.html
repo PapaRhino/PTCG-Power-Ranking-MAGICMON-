@@ -367,7 +367,7 @@
             // Return the single highest scoring category
             return maxCategories[0];
         }
-        function navigateToEvaluationPage(card, score, tier, details) {
+        function navigateToEvaluationPage(card, score, tier, details, category) {
             // Save the evaluation data temporarily in sessionStorage
             sessionStorage.setItem("evaluationData", JSON.stringify({ card, score, tier, details, category }));
 
