@@ -172,6 +172,13 @@
         
             let score = 0;
             let details = [];
+            
+            // Initialize category scoring
+            let categoryScores = {
+                attacker: 0,
+                utility: 0,
+                defender: 0
+            };
         
             // Summon Cost
             const summonCost = Math.max(1, retreatCost + stage + ruleBox);
@@ -183,10 +190,13 @@
             let hpScore = 0;
             if (hp >= 200) {
                 hpScore = 4;
+                categoryScores.defender += 4;
             } else if (hp >= 120) {
                 hpScore = 3;
+                categoryScores.defender += 3;
             } else if (hp >= 60) {
                 hpScore = 2;
+                categoryScores.defender += 2;
             } else {
                 hpScore = -3;
             }
@@ -196,43 +206,45 @@
             // Abilities Evaluation
             abilities.forEach(ability => {
                 const abilityText = ability.text.toLowerCase();
+                let abilityScore = 0;
+                let effectDetails = [];
                 
                 // Call for Family check
                 if (abilityText.includes("search your deck") && 
                     (abilityText.includes("pokémon") || abilityText.includes("pokemon")) && 
                     abilityText.includes("bench") && 
                     !abilityText.includes("energy")) {
-                    score += 8;
-                    details.push(`Ability "${ability.name}": Call for Family effect → +8`);
-                    return;
+                    abilityScore += 8;
+                    effectDetails.push("Call for Family (+8)");
+                    categoryScores.utility += 8;
                 }
                 
                 // Status effects check
-                let statusScore = 0;
                 if (abilityText.includes("paralyzed")) {
-                    statusScore = 3;
+                    abilityScore += 3;
+                    effectDetails.push("Paralyze (+3)");
+                    categoryScores.utility += 3;
                 } else if (abilityText.includes("asleep") || 
                            abilityText.includes("confused") || 
                            abilityText.includes("poisoned")) {
-                    statusScore = 4;
+                    abilityScore += 4;
+                    effectDetails.push("Status effect (+4)");
+                    categoryScores.utility += 4;
                 } else if (abilityText.includes("burned")) {
-                    statusScore = 1;
-                }
-                
-                if (statusScore > 0) {
-                    score += statusScore;
-                    details.push(`Ability "${ability.name}": Status effect → +${statusScore}`);
-                    return;
+                    abilityScore += 1;
+                    effectDetails.push("Burn (+1)");
+                    categoryScores.utility += 1;
                 }
                 
                 // Search effect check
-                if (abilityText.includes("search your deck")) {
-                    score += 4;
-                    details.push(`Ability "${ability.name}": Search effect → +4`);
-                    return;
+                if (abilityText.includes("search your deck") && !effectDetails.includes("Call for Family (+8)")) {
+                    abilityScore += 4;
+                    effectDetails.push("Search effect (+4)");
+                    categoryScores.utility += 4;
                 }
         
-                details.push(`Ability "${ability.name}": No special effects → +0`);
+                score += abilityScore;
+                details.push(`Ability "${ability.name}": ${effectDetails.length > 0 ? effectDetails.join(", ") : "No special effects → +0"}`);
             });
         
             // Attacks Evaluation
@@ -247,6 +259,7 @@
                 if (attack.name.includes("GX") || attack.name.includes("VSTAR")) {
                     attackScore += 3;
                     effectDetails.push("GX/VSTAR move (+3)");
+                    categoryScores.attacker += 3;
                 }
         
                 // Self-Damage Check
@@ -262,26 +275,31 @@
                     !attackText.includes("energy")) {
                     attackScore += 8;
                     effectDetails.push("Call for Family (+8)");
+                    categoryScores.utility += 8;
                 }
                 
                 // Status effects
                 if (attackText.includes("paralyzed")) {
                     attackScore += 3;
                     effectDetails.push("Paralyze (+3)");
+                    categoryScores.attacker += 3;
                 } else if (attackText.includes("asleep") || 
                            attackText.includes("confused") || 
                            attackText.includes("poisoned")) {
                     attackScore += 4;
                     effectDetails.push("Status effect (+4)");
+                    categoryScores.attacker += 4;
                 } else if (attackText.includes("burned")) {
                     attackScore += 1;
                     effectDetails.push("Burn (+1)");
+                    categoryScores.attacker += 1;
                 }
         
                 // Search effect
                 if (attackText.includes("search your deck") && !attackText.includes("bench")) {
                     attackScore += 4;
                     effectDetails.push("Search effect (+4)");
+                    categoryScores.utility += 4;
                 }
         
                 // Damage evaluation
@@ -290,9 +308,11 @@
                     if (damage >= 100) {
                         attackScore += 3;
                         effectDetails.push("High damage (+3)");
+                        categoryScores.attacker += 3;
                     } else if (damage >= 50) {
                         attackScore += 2;
                         effectDetails.push("Good damage (+2)");
+                        categoryScores.attacker += 2;
                     }
                 }
         
@@ -307,7 +327,21 @@
             else if (score >= 5) tier = "B";
             else if (score >= 3) tier = "C";
         
-            navigateToEvaluationPage(card, score, tier, details);
+            // Determine Category
+            let category = "Soldier";
+            const maxScore = Math.max(categoryScores.attacker, categoryScores.utility, categoryScores.defender);
+            
+            if (maxScore > 0) {
+                // Count how many categories have the max score
+                const maxCategories = Object.entries(categoryScores).filter(([_, score]) => score === maxScore);
+                
+                if (maxCategories.length === 1) {
+                    // Only one category has the highest score
+                    category = maxCategories[0][0].charAt(0).toUpperCase() + maxCategories[0][0].slice(1);
+                }
+            }
+        
+            navigateToEvaluationPage(card, score, tier, details, category);
         }
         function navigateToEvaluationPage(card, score, tier, details) {
             // Save the evaluation data temporarily in sessionStorage
