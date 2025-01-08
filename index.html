@@ -327,25 +327,49 @@
             else if (score >= 5) tier = "B";
             else if (score >= 3) tier = "C";
         
-            // Determine Category
-            let category = "Soldier";
-            const maxScore = Math.max(categoryScores.attacker, categoryScores.utility, categoryScores.defender);
-            
-            if (maxScore > 0) {
-                // Count how many categories have the max score
-                const maxCategories = Object.entries(categoryScores).filter(([_, score]) => score === maxScore);
-                
-                if (maxCategories.length === 1) {
-                    // Only one category has the highest score
-                    category = maxCategories[0][0].charAt(0).toUpperCase() + maxCategories[0][0].slice(1);
-                }
-            }
+           const category = determineCategory(categoryScores);
+    
+            // Log the category scores for debugging
+            console.log("Category Scores:", categoryScores);
+            console.log("Determined Category:", category);
         
             navigateToEvaluationPage(card, score, tier, details, category);
         }
+        
+            
+
+        function determineCategory(categoryScores) {
+            // If all scores are 0, return Soldier
+            if (categoryScores.attacker === 0 && 
+                categoryScores.utility === 0 && 
+                categoryScores.defender === 0) {
+                return "Soldier";
+            }
+        
+            // Find the highest score
+            const maxScore = Math.max(
+                categoryScores.attacker, 
+                categoryScores.utility, 
+                categoryScores.defender
+            );
+        
+            // Count how many categories have the max score
+            let maxCategories = [];
+            if (categoryScores.attacker === maxScore) maxCategories.push("Attacker");
+            if (categoryScores.utility === maxScore) maxCategories.push("Utility");
+            if (categoryScores.defender === maxScore) maxCategories.push("Defender");
+        
+            // If there's a tie, return Soldier
+            if (maxCategories.length > 1) {
+                return "Soldier";
+            }
+        
+            // Return the single highest scoring category
+            return maxCategories[0];
+        }
         function navigateToEvaluationPage(card, score, tier, details) {
             // Save the evaluation data temporarily in sessionStorage
-            sessionStorage.setItem("evaluationData", JSON.stringify({ card, score, tier, details }));
+            sessionStorage.setItem("evaluationData", JSON.stringify({ card, score, tier, details, category }));
 
             // Redirect to the evaluation page
             window.location.href = "evaluation.html";
