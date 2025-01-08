@@ -155,149 +155,160 @@
         }
 
         function evaluateCard(card) {
+            // Check if card is not a Pokémon
+            if (card.supertype !== "Pokémon") {
+                navigateToEvaluationPage(card, null, "N/A", ["This card type does not have a power score yet."]);
+                return;
+            }
+        
             const retreatCost = (card.retreatCost || []).filter(cost => cost === "Colorless").length || 0;
             const hp = parseInt(card.hp) || 0;
             const attacks = card.attacks || [];
-            const stage = card.supertype === "Pokémon" && card.subtypes.includes("Stage 1") ? 1
-                        : card.supertype === "Pokémon" && card.subtypes.includes("Stage 2") ? 2
+            const abilities = card.abilities || [];
+            const stage = card.subtypes.includes("Stage 1") ? 1 
+                        : card.subtypes.includes("Stage 2") ? 2 
                         : 0;
             const ruleBox = card.rules ? 2 : 0;
-            const ability = card.abilities ? 1 : 0;
-
+        
             let score = 0;
             let details = [];
-
+        
             // Summon Cost
             const summonCost = Math.max(1, retreatCost + stage + ruleBox);
-            score += summonCost === 1 ? 3 : summonCost === 2 ? 2 : summonCost === 3 ? 1 : summonCost === 4 ? 0 : -2;
-            details.push(`Summon Cost: ${summonCost} → ${summonCost === 1 ? "+3" : summonCost === 2 ? "+2" : summonCost === 3 ? "+1" : summonCost === 4 ? "+0" : "-2"}`);
-
-            // HP
-            if (hp >= 200) {
-                score += 4;
-                details.push(`HP: ${hp} → +4 (200+ HP)`);
-            } else if (hp >= 120) {
-                score += 3;
-                details.push(`HP: ${hp} → +3 (120+ HP)`);
-            } else if (hp >= 60) {
-                score += 2;
-                details.push(`HP: ${hp} → +2 (60+ HP)`);
-            } else {
-                score -= 3;
-                details.push(`HP: ${hp} → -3 (Low HP)`);
-            }
-
-          // Attacks evaluation
-        let hasSearchOrStatus = false;
-        let hasHighDamage = false;
-        let attackScore = 0;
-
-        attacks.forEach(attack => {
-            const damage = parseInt(attack.damage) || 0;
-            const attackText = attack.text ? attack.text.toLowerCase() : '';
-            const selfDamage = attackText.includes("damage to itself");
-            const hasStatus = ["paralyzed", "poisoned", "confused", "burned", "asleep"].some(cond => 
-                attackText.includes(cond));
-            
-            
-
-            // Check for high damage
-            const noSetup = !attack.damage.includes("x") && !attack.damage.includes("+");
-            if (noSetup && damage >= 50) {
-                hasHighDamage = true;
-            }
-            
-            // GX/VSTAR Check
-            if (attack.name.includes("GX") || attack.name.includes("VSTAR")) {
-                attackScore += 3;
-                details.push(`Attack "${attack.name}": GX/VSTAR move → +3`);
-                return; // Skip other evaluations for this attack
-            }
-
-            // Self-Damage Check (only apply negative)
-            if (selfDamage) {
-                attackScore -= 2;
-                details.push(`Attack "${attack.name}": Self-damage → -2`);
-            }
-
-            // Damage + Status
-            if (damage > 1 && hasStatus) {
-                attackScore += 1;
-                details.push(`Attack "${attack.name}": Damage + Status → +1`);
-            }
-
-            // High/Mega Damage without setup
-            if (noSetup) {
-                if (damage >= 100) {
-                    attackScore += 3;
-                    details.push(`Attack "${attack.name}": Mega damage (${damage}) without setup → +3`);
-                } else if (damage >= 50) {
-                    attackScore += 2;
-                    details.push(`Attack "${attack.name}": High damage (${damage}) without setup → +2`);
-                }
-            }
-
-            // Call for Family check - with pokémon accent
-            const isCallForFamily = attackText.includes("search your deck") && 
-                                (attackText.includes("pokémon") || attackText.includes("pokemon")) && 
-                                attackText.includes("bench") && 
-                                !attackText.includes("energy");
-
-                               
-                                    
-            // Energy Ramping check
-            const isEnergyRamp = attackText.includes("attach") && 
-                                attackText.includes("energy") && 
-                                (attackText.includes("hand") || attackText.includes("deck")) &&
-                                !attackText.includes("discard");
-
-            // Check for search or status conditions
-            if (!isCallForFamily && !isEnergyRamp) {  // Only check if neither special condition was met
-            if (attackText.includes("search your deck") || hasStatus) {
-                hasSearchOrStatus = true;
-            }
-        }                    
-
-            // Special attacks scoring
-            if (isCallForFamily) {
-                attackScore += 8;
-                details.push(`Attack "${attack.name}": Call for Family effect → +8`);
-            } else if (isEnergyRamp) {
-                attackScore += 6;
-                details.push(`Attack "${attack.name}": Energy Ramping effect → +6`);
-            } else if (damage === 0 || isNaN(damage)) {
-                // Regular search/status check (only if not Call for Family or Energy Ramp)
-                if (attackText.includes("search your deck") || hasStatus) {
-                    attackScore += 4;
-                    details.push(`Attack "${attack.name}": Search/Status effect → +4`);
-                }
-            }
-        });
-            //Energy Types in attacks logic
-            //attack cost
-
+            const summonScore = summonCost === 1 ? 3 : summonCost === 2 ? 2 : summonCost === 3 ? 1 : summonCost === 4 ? 0 : -2;
+            score += summonScore;
+            details.push(`Summon Cost (${summonCost}): ${summonScore >= 0 ? '+' : ''}${summonScore}`);
         
-
-        // Add attackScore to the total score
-        score += attackScore;
-
-        // Abilities
-        score += ability;
-        details.push(`Ability: ${ability === 1 ? "+1" : "+0"}`);
-
-        // Weakness and Resitances
-
+            // HP Evaluation
+            let hpScore = 0;
+            if (hp >= 200) {
+                hpScore = 4;
+            } else if (hp >= 120) {
+                hpScore = 3;
+            } else if (hp >= 60) {
+                hpScore = 2;
+            } else {
+                hpScore = -3;
+            }
+            score += hpScore;
+            details.push(`HP (${hp}): ${hpScore >= 0 ? '+' : ''}${hpScore}`);
+        
+            // Abilities Evaluation
+            abilities.forEach(ability => {
+                const abilityText = ability.text.toLowerCase();
+                
+                // Call for Family check
+                if (abilityText.includes("search your deck") && 
+                    (abilityText.includes("pokémon") || abilityText.includes("pokemon")) && 
+                    abilityText.includes("bench") && 
+                    !abilityText.includes("energy")) {
+                    score += 8;
+                    details.push(`Ability "${ability.name}": Call for Family effect → +8`);
+                    return;
+                }
+                
+                // Status effects check
+                let statusScore = 0;
+                if (abilityText.includes("paralyzed")) {
+                    statusScore = 3;
+                } else if (abilityText.includes("asleep") || 
+                           abilityText.includes("confused") || 
+                           abilityText.includes("poisoned")) {
+                    statusScore = 4;
+                } else if (abilityText.includes("burned")) {
+                    statusScore = 1;
+                }
+                
+                if (statusScore > 0) {
+                    score += statusScore;
+                    details.push(`Ability "${ability.name}": Status effect → +${statusScore}`);
+                    return;
+                }
+                
+                // Search effect check
+                if (abilityText.includes("search your deck")) {
+                    score += 4;
+                    details.push(`Ability "${ability.name}": Search effect → +4`);
+                    return;
+                }
+        
+                details.push(`Ability "${ability.name}": No special effects → +0`);
+            });
+        
+            // Attacks Evaluation
+            attacks.forEach(attack => {
+                const damage = parseInt(attack.damage) || 0;
+                const attackText = attack.text ? attack.text.toLowerCase() : '';
+                const selfDamage = attackText.includes("damage to itself");
+                let attackScore = 0;
+                let effectDetails = [];
+        
+                // GX/VSTAR Check
+                if (attack.name.includes("GX") || attack.name.includes("VSTAR")) {
+                    attackScore += 3;
+                    effectDetails.push("GX/VSTAR move (+3)");
+                }
+        
+                // Self-Damage Check
+                if (selfDamage) {
+                    attackScore -= 2;
+                    effectDetails.push("Self-damage (-2)");
+                }
+        
+                // Call for Family check
+                if (attackText.includes("search your deck") && 
+                    (attackText.includes("pokémon") || attackText.includes("pokemon")) && 
+                    attackText.includes("bench") && 
+                    !attackText.includes("energy")) {
+                    attackScore += 8;
+                    effectDetails.push("Call for Family (+8)");
+                }
+                
+                // Status effects
+                if (attackText.includes("paralyzed")) {
+                    attackScore += 3;
+                    effectDetails.push("Paralyze (+3)");
+                } else if (attackText.includes("asleep") || 
+                           attackText.includes("confused") || 
+                           attackText.includes("poisoned")) {
+                    attackScore += 4;
+                    effectDetails.push("Status effect (+4)");
+                } else if (attackText.includes("burned")) {
+                    attackScore += 1;
+                    effectDetails.push("Burn (+1)");
+                }
+        
+                // Search effect
+                if (attackText.includes("search your deck") && !attackText.includes("bench")) {
+                    attackScore += 4;
+                    effectDetails.push("Search effect (+4)");
+                }
+        
+                // Damage evaluation
+                const noSetup = !attack.damage.includes("x") && !attack.damage.includes("+");
+                if (noSetup) {
+                    if (damage >= 100) {
+                        attackScore += 3;
+                        effectDetails.push("High damage (+3)");
+                    } else if (damage >= 50) {
+                        attackScore += 2;
+                        effectDetails.push("Good damage (+2)");
+                    }
+                }
+        
+                score += attackScore;
+                details.push(`Attack "${attack.name}": ${effectDetails.length > 0 ? effectDetails.join(", ") : "No special effects → +0"}`);
+            });
+        
             // Determine Tier
             let tier = "D";
             if (score >= 10) tier = "S";
             else if (score >= 8) tier = "A";
             else if (score >= 5) tier = "B";
             else if (score >= 3) tier = "C";
-
-            // Navigate to evaluation page
+        
             navigateToEvaluationPage(card, score, tier, details);
         }
-
         function navigateToEvaluationPage(card, score, tier, details) {
             // Save the evaluation data temporarily in sessionStorage
             sessionStorage.setItem("evaluationData", JSON.stringify({ card, score, tier, details }));
