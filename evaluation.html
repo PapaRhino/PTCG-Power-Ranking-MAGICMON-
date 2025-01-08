@@ -163,6 +163,27 @@
             stroke-width: 2;
             fill: none;
         }
+         .category-badge {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin: 5px 0;
+            display: inline-block;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .card-title-section {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 <body>
@@ -190,8 +211,8 @@
     <script>
         const evaluationData = JSON.parse(sessionStorage.getItem("evaluationData"));
 
-      if (evaluationData) {
-            const { card, score, tier, details } = evaluationData;
+        if (evaluationData) {
+            const { card, score, tier, details, category } = evaluationData;
             const evaluationDiv = document.getElementById('evaluationDetails');
             
             evaluationDiv.innerHTML = `
@@ -203,8 +224,14 @@
                         <div class="card-back">
                             <div class="evaluation-grid" style="display: grid; gap: 20px;">
                                 <div class="card-details">
-                                    <h2>${card.name}</h2>
-                                    <h3>Tier: ${tier} (Score: ${score})</h3>
+                                    <div class="card-header">
+                                        <div class="card-title-section">
+                                            <h2>${card.name}</h2>
+                                            <span class="category-badge">${category}</span>
+                                        </div>
+                                        <span class="category-badge" style="align-self: flex-start">${category}</span>
+                                    </div>
+                                    <h3>Tier: ${tier} ${score !== null ? `(Score: ${score})` : ''}</h3>
                                     <div class="score-breakdown">
                                         <h4>Score Breakdown:</h4>
                                         <ul style="list-style: none; padding: 0;">
@@ -215,56 +242,12 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                <button class="flip-button" onclick="toggleCardFlip()">
-                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" style="margin: auto;">
-                        <path d="M3 12h18M3 12l4-4m-4 4l4 4"/>
-                    </svg>
-                </button>`;
-        
-            // Add flip timer for mobile
-            if (window.innerWidth <= 768) {
-                setTimeout(() => {
-                    document.querySelector('.card-flipper').classList.add('flipped');
-                }, 5000);
-            }
-        }
-        
-                
-
-        function categorizeCard(category) {
-            const { card, score, tier } = evaluationData;
-            
-            // Create categorizedCards array if it doesn't exist
-            if (typeof categorizedCards === 'undefined') {
-                window.categorizedCards = [];
-            }
-            
-            // Add the card to categorizedCards
-            categorizedCards.push({ name: card.name, score, tier, category });
-            var evaldata = ({ name: card.name, score, tier, category });
-            localStorage.setItem("categorizedCards", JSON.stringify(categorizedCards));
-            
-            // Clear session storage and redirect
-            sessionStorage.removeItem("evaluationData");
-            window.location.href = "index.html";
+                </div>`;
         }
 
         function toggleCardFlip() {
             const flipper = document.querySelector('.card-flipper');
             flipper.classList.toggle('flipped');
-        }
-
-        // Add this function to the main HTML file
-        function saveToFile(evaldata) {
-            const jsonString = JSON.stringify(evaldata, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'categorized_cards.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
         }
     </script>
 </body>
