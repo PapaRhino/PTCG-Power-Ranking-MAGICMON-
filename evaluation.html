@@ -203,13 +203,20 @@
     </button>
 
     <script>
+        const categoryIcons = {
+            "Attacker": "https://pipuwong.com/_astro/Grafana.LN-tn6Hr_Z2r6MCO.webp",
+            "Defender": "https://example.com/icons/water-icon.png",
+            "Utility": "https://example.com/icons/electric-icon.png",
+            "Soldier": "https://example.com/icons/grass-icon.png"
+            // Add more categories and their corresponding icon URLs here
+        };
         const evaluationData = JSON.parse(sessionStorage.getItem("evaluationData"));
 
         if (evaluationData) {
             const { card, score, tier, details, category } = evaluationData;
             const evaluationDiv = document.getElementById('evaluationDetails');
             
-            evaluationDiv.innerHTML = `
+             evaluationDiv.innerHTML = `
                 <div class="card-container">
                     <div class="card-flipper">
                         <div class="card-front">
@@ -223,7 +230,8 @@
                                             <h2>${card.name}</h2>
                                             <span class="category-badge">${category}</span>
                                         </div>
-                                        <span class="category-badge" style="align-self: flex-start">${category}</span>
+                                        <img src="${categoryIcons[category] || 'https://example.com/icons/default-icon.png'}" 
+                                            alt="${category} icon" class="category-icon">
                                     </div>
                                     <h3>Tier: ${tier} ${score !== null ? `(Score: ${score})` : ''}</h3>
                                     <div class="score-breakdown">
