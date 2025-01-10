@@ -94,7 +94,6 @@
         
         .card-front {
             z-index: 2;
-            position: relative;
         }
         
         .card-back {
@@ -102,26 +101,23 @@
         }
 
         .category-icon {
-            position: absolute;
-            top: 10px;
-            right: 10px;
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background-color: var(--primary-color);
             padding: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            margin-left: 10px;
         }
 
         .card-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             margin-bottom: 10px;
         }
 
         .card-title-section {
-            flex-grow: 1;
+            display: flex;
+            align-items: center;
         }
         
         @media (max-width: 768px) {
@@ -225,8 +221,6 @@
                     <div class="card-flipper">
                         <div class="card-front">
                             <img src="${card.images.large}" alt="${card.name}" style="width: 100%; border-radius: 10px;">
-                            <img src="${categoryIcons[category] || 'https://example.com/icons/default-icon.png'}" 
-                                alt="${category} icon" class="category-icon">
                         </div>
                         <div class="card-back">
                             <div class="evaluation-grid" style="display: grid; gap: 20px;">
@@ -234,6 +228,8 @@
                                     <div class="card-header">
                                         <div class="card-title-section">
                                             <h2>${card.name}</h2>
+                                            <img src="${categoryIcons[category] || 'https://example.com/icons/default-icon.png'}" 
+                                                alt="${category} icon" class="category-icon">
                                         </div>
                                     </div>
                                     <h3>Tier: ${tier} ${score !== null ? `(Score: ${score})` : ''}</h3>
