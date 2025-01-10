@@ -13,7 +13,7 @@
             --text-color: #e0e0e0;
             --text-muted: #999;
             --detail-bg: #363636;
-                }
+        }
 
         body {
             background-color: var(--background-color);
@@ -65,6 +65,7 @@
         #evaluationDetails {
             margin-bottom: 30px;
         }
+
         .card-container {
             perspective: 1000px;
             width: 100%;
@@ -93,10 +94,34 @@
         
         .card-front {
             z-index: 2;
+            position: relative;
         }
         
         .card-back {
             transform: rotateY(180deg);
+        }
+
+        .category-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            padding: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .card-title-section {
+            flex-grow: 1;
         }
         
         @media (max-width: 768px) {
@@ -122,7 +147,8 @@
                 box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             }
         }
-         .back-button {
+
+        .back-button {
             position: fixed;
             top: 20px;
             left: 20px;
@@ -163,27 +189,6 @@
             stroke-width: 2;
             fill: none;
         }
-         .category-badge {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-            margin: 5px 0;
-            display: inline-block;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .card-title-section {
-            display: flex;
-            flex-direction: column;
-        }
     </style>
 </head>
 <body>
@@ -208,7 +213,6 @@
             "Defender": "https://example.com/icons/water-icon.png",
             "Utility": "https://example.com/icons/electric-icon.png",
             "Soldier": "https://example.com/icons/grass-icon.png"
-            // Add more categories and their corresponding icon URLs here
         };
         const evaluationData = JSON.parse(sessionStorage.getItem("evaluationData"));
 
@@ -216,11 +220,13 @@
             const { card, score, tier, details, category } = evaluationData;
             const evaluationDiv = document.getElementById('evaluationDetails');
             
-             evaluationDiv.innerHTML = `
+            evaluationDiv.innerHTML = `
                 <div class="card-container">
                     <div class="card-flipper">
                         <div class="card-front">
                             <img src="${card.images.large}" alt="${card.name}" style="width: 100%; border-radius: 10px;">
+                            <img src="${categoryIcons[category] || 'https://example.com/icons/default-icon.png'}" 
+                                alt="${category} icon" class="category-icon">
                         </div>
                         <div class="card-back">
                             <div class="evaluation-grid" style="display: grid; gap: 20px;">
@@ -228,10 +234,7 @@
                                     <div class="card-header">
                                         <div class="card-title-section">
                                             <h2>${card.name}</h2>
-                                            <span class="category-badge">${category}</span>
                                         </div>
-                                        <img src="${categoryIcons[category] || 'https://example.com/icons/default-icon.png'}" 
-                                            alt="${category} icon" class="category-icon">
                                     </div>
                                     <h3>Tier: ${tier} ${score !== null ? `(Score: ${score})` : ''}</h3>
                                     <div class="score-breakdown">
@@ -254,4 +257,3 @@
     </script>
 </body>
 </html>
-
