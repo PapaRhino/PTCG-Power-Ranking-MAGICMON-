@@ -160,6 +160,14 @@
                 navigateToEvaluationPage(card, null, "N/A", ["This card type does not have a power score yet."]);
                 return;
             }
+             // Generate classification code
+            const classificationCode = await PCCS.generateCode(
+                cardData.cardType,    // "Special", "Regular", "Trainer", or "Energy"
+                cardData.category,    // Specific category within the type
+                cardData.hp,         // HP value for Pokemon cards
+                cardData.type,       // Pokemon type
+                cardData.name        // Pokemon name for Pokedex lookup
+            );
         
             const retreatCost = (card.retreatCost || []).filter(cost => cost === "Colorless").length || 0;
             const hp = parseInt(card.hp) || 0;
@@ -334,6 +342,8 @@
             console.log("Determined Category:", category);
         
             navigateToEvaluationPage(card, score, tier, details, category);
+            / Add classification code to your card data
+            cardData.classificationCode = classificationCode;
         }
         
             
