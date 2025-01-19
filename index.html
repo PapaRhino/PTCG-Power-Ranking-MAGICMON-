@@ -161,14 +161,21 @@
                 navigateToEvaluationPage(card, null, "N/A", ["This card type does not have a power score yet."]);
                 return;
             }
-             // Generate classification code
-            const classificationCode = await PCCS.generateCode(
-                cardData.cardType,    // "Special", "Regular", "Trainer", or "Energy"
-                cardData.category,    // Specific category within the type
-                cardData.hp,         // HP value for Pokemon cards
-                cardData.type,       // Pokemon type
-                cardData.name        // Pokemon name for Pokedex lookup
-            );
+            // Get the card type details
+                const cardType = card.supertype;
+                const category = card.subtypes && card.subtypes[0];
+                const hp = card.hp;
+                const type = card.types && card.types[0];
+                const name = card.name;
+                
+                // Generate classification code
+                const classificationCode = await PCCS.generateCode(
+                    cardType,
+                    category,
+                    hp,
+                    type,
+                    name
+                );
         
             const retreatCost = (card.retreatCost || []).filter(cost => cost === "Colorless").length || 0;
             const hp = parseInt(card.hp) || 0;
@@ -380,7 +387,7 @@
         }
         function navigateToEvaluationPage(card, score, tier, details, category) {
             // Save the evaluation data temporarily in sessionStorage
-            sessionStorage.setItem("evaluationData", JSON.stringify({ card, score, tier, details, category }));
+            sessionStorage.setItem("evaluationData", JSON.stringify({ card, score, tier, details, category, classificationCode}));
 
             // Redirect to the evaluation page
             window.location.href = "evaluation.html";
