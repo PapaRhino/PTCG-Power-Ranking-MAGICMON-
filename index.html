@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="classification.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MagicMon Card Scoring</title>
@@ -161,21 +160,6 @@
                 navigateToEvaluationPage(card, null, "N/A", ["This card type does not have a power score yet."]);
                 return;
             }
-            // Get the card type details
-                const cardType = card.supertype;
-                const category = card.subtypes && card.subtypes[0];
-                const hp = card.hp;
-                const type = card.types && card.types[0];
-                const name = card.name;
-                
-                // Generate classification code
-                const classificationCode = await PCCS.generateCode(
-                    cardType,
-                    category,
-                    hp,
-                    type,
-                    name
-                );
         
             const retreatCost = (card.retreatCost || []).filter(cost => cost === "Colorless").length || 0;
             const hp = parseInt(card.hp) || 0;
@@ -350,8 +334,6 @@
             console.log("Determined Category:", category);
         
             navigateToEvaluationPage(card, score, tier, details, category);
-            / Add classification code to your card data
-            cardData.classificationCode = classificationCode;
         }
         
             
@@ -387,7 +369,7 @@
         }
         function navigateToEvaluationPage(card, score, tier, details, category) {
             // Save the evaluation data temporarily in sessionStorage
-            sessionStorage.setItem("evaluationData", JSON.stringify({ card, score, tier, details, category, classificationCode}));
+            sessionStorage.setItem("evaluationData", JSON.stringify({ card, score, tier, details, category }));
 
             // Redirect to the evaluation page
             window.location.href = "evaluation.html";
