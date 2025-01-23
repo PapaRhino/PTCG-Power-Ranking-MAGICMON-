@@ -1,214 +1,277 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pokémon TCG Classifier</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon Card Classifier</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .card-container { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
+        .card { cursor: pointer; text-align: center; border: 1px solid #ccc; padding: 10px; border-radius: 5px; width: 150px; }
+        .card img { max-width: 100px; max-height: 100px; }
+        .classification { font-weight: bold; color: #555; margin-top: 10px; }
+        #searchControls { margin-bottom: 20px; }
+        #searchInput { padding: 8px; font-size: 16px; }
+        #searchBtn { padding: 8px 16px; font-size: 16px; cursor: pointer; }
+    </style>
 </head>
 <body>
-  <div id="app">
-    <header>
-      <h1>Pokémon TCG Classifier</h1>
-      <div class="search-bar">
-        <input type="text" id="search-box" placeholder="Search for a card..." />
-        <button id="search-button" class="button">Search</button>
-      </div>
-      <div id="filters-container">
-        <div class="search-bar">
-          <input type="text" id="type-filter" placeholder="Card Type (e.g., Fire, Water)" />
-          <input type="text" id="rarity-filter" placeholder="Rarity (e.g., Rare, Common)" />
-          <input type="number" id="min-hp-filter" placeholder="Min HP" />
-          <input type="number" id="max-hp-filter" placeholder="Max HP" />
-          <button class="button" id="filter-button">Filter</button>
-        </div>
-        <div class="search-bar">
-          <input type="text" id="reverse-search-box" placeholder="Enter Classification Code (e.g., S.Pokemon.25.Fire)" />
-          <button class="button" id="reverse-search-button">Reverse Search</button>
-        </div>
-      </div>
-      
-      
-    </header>
-    <main>
-        <div id="carousel-container" class="card-carousel">
+    <h1>Pokémon Card Classifier</h1>
+    <div id="searchControls">
+        <input type="text" id="searchInput" placeholder="Enter card name..." />
+        <button id="searchBtn">Search</button>
+    </div>
 
-        <!-- Cards will be rendered here -->
-      </div>
-      <div id="card-details-container">
-        <!-- Card details will be shown here -->
-      </div>
-       <!-- Add power level and classification display -->
-       <div id="card-classification">
-                <h3>Card Classification</h3>
-                <div class="power-level" id="power-level"></div>
-                <div class="classification-code" id="classification-code"></div>
-                <div class="code-explanation" id="code-explanation"></div>
-            </div>
-        </main>
-        </div>
-        <script>
-            const POKEMONTCG_API_KEY = "your-api-key";
-            const POKEMONTCG_API_BASE = "https://api.pokemontcg.io/v2";
-            const POKEAPI_BASE = "https://pokeapi.co/api/v2";
-        </script>
-        <script type="module" src="js/api.js"></script>
-        <script type="module" src="js/cardUtils.js"></script>
-        <script type="module" src="js/ui.js"></script>
-        <script type="module" src="js/app.js"></script>
+    <div class="card-container" id="cardContainer"></div>
 
-  <script>
-    // Global Variables
-    let recentlyViewedCards = []; // Stores recently viewed cards
-    let pokemonList = []; // Stores the basic Pokémon list for the dropdown
+    <script>
+        const POKEMONTCG_API_KEY = "your-api-key";
+        const POKEMONTCG_API_BASE = "https://api.pokemontcg.io/v2";
+        const POKEAPI_BASE = "https://pokeapi.co/api/v2";
 
-    // Initialize App
-    async function initializeApp() {
-      console.log("Initializing App...");
+        async function searchCards(query) {
+            const tcgResponse = await fetch(`${POKEMONTCG_API_BASE}/cards?q=name:${query}`, {
+                headers: { "X-Api-Key": POKEMONTCG_API_KEY }
+            });
+            const tcgData = await tcgResponse.json();
+            return tcgData.data;
+        }
 
-      // Load recently viewed cards from local storage
-      loadRecentlyViewedCards();
+        
 
-      // Fetch Pokémon list for reverse search dropdown
-      await fetchPokemonList();
+        
 
-      // Set up event listeners
-      setupEventListeners();
-    }
+        async function renderCards(cards) {
+            const container = document.getElementById("cardContainer");
+            container.innerHTML = ""; // Clear previous results
 
-    // Load Recently Viewed Cards
-    function loadRecentlyViewedCards() {
-      if (localStorage.getItem("recentlyViewed")) {
-        recentlyViewedCards = JSON.parse(localStorage.getItem("recentlyViewed"));
-        renderRecentlyViewedCards();
-      }
-    }
+            for (const card of cards) {
+                const cardDiv = document.createElement("div");
+                cardDiv.className = "card";
 
-    // Fetch Pokémon List
-    async function fetchPokemonList() {
-      try {
-        const response = await fetch(`${POKEAPI_BASE}/pokemon?limit=1000`);
-        const data = await response.json();
-        pokemonList = data.results.map((pokemon) => pokemon.name);
-        console.log("Pokémon list loaded:", pokemonList);
-      } catch (error) {
-        console.error("Error fetching Pokémon list:", error);
-      }
-    }
-
-    // Render Recently Viewed Cards
-    function renderRecentlyViewedCards() {
-      const carouselContainer = document.getElementById("carousel-container");
-      carouselContainer.innerHTML = "";
-
-      if (recentlyViewedCards.length === 0) {
-        carouselContainer.innerHTML = "<p>No recently viewed cards. Search to get started!</p>";
-        return;
-      }
-
-      recentlyViewedCards.forEach((card) => {
-        const cardElement = document.createElement("div");
-        cardElement.classList.add("card");
-        cardElement.innerHTML = `
-          <img src="${card.images.small}" alt="${card.name}" />
-          <p>${card.name}</p>
-        `;
-        cardElement.addEventListener("click", () => displayCardDetails(card));
-        carouselContainer.appendChild(cardElement);
-      });
-    }
-
-    // Display Card Details
-    function displayCardDetails(card) {
-      const cardDetailsContainer = document.getElementById("card-details-container");
-      cardDetailsContainer.innerHTML = `
-        <h2>${card.name}</h2>
-        <img src="${card.images.large}" alt="${card.name}" />
-        <p>HP: ${card.hp}</p>
-        <p>Type: ${card.types.join(", ")}</p>
-      `;
-      addToRecentlyViewed(card);
-    }
-
-    // Add Card to Recently Viewed
-    function addToRecentlyViewed(card) {
-      recentlyViewedCards = [card, ...recentlyViewedCards.filter((c) => c.id !== card.id)];
-      if (recentlyViewedCards.length > 10) recentlyViewedCards.pop(); // Limit to 10
-      localStorage.setItem("recentlyViewed", JSON.stringify(recentlyViewedCards));
-      renderRecentlyViewedCards();
-    }
-
-    function setupEventListeners() {
-        const searchBox = document.getElementById("search-box");
-        const searchButton = document.getElementById("search-button");
-        const filterButton = document.getElementById("filter-button");
-        const reverseSearchButton = document.getElementById("reverse-search-button");
-
-        searchButton.addEventListener("click", () => searchCardsByName(searchBox.value));
-        searchBox.addEventListener("keypress", (event) => {
-            if (event.key === "Enter") searchCardsByName(searchBox.value);
-        });
-
-        filterButton.addEventListener("click", () => {
-            const filters = {
-            type: document.getElementById("type-filter").value,
-            rarity: document.getElementById("rarity-filter").value,
-            minHP: document.getElementById("min-hp-filter").value,
-            maxHP: document.getElementById("max-hp-filter").value
-            };
-            searchCardsByFilters(filters);
-        });
-
-        reverseSearchButton.addEventListener("click", () => {
-            const classificationCode = document.getElementById("reverse-search-box").value;
-            reverseSearch(classificationCode);
-        });
+                // Await the Pokedex number here
+                const pokedexNumber = await getPokedexNumber(card.name);
+                const powerTier = evaluateCard(card).tier;
+                const powerLevel = evaluateCard(card).score;
+                const cardType = determineCardType(card);
+                const classificationCode = `${powerTier}.${powerLevel}.${cardType}.${pokedexNumber || "9999"}`;
+                
+                cardDiv.innerHTML = `
+                    <img src="${card.images.small}" alt="${card.name}" />
+                    <p>${card.name}</p>
+                    <div class="classification" id="classification-${card.id}">Code: ${classificationCode}</div>
+                `;
+                
+                container.appendChild(cardDiv);
+            }
         }
 
 
-    // Search Cards by Name
-    async function searchCardsByName(name) {
-      if (!name.trim()) {
-        alert("Please enter a card name to search.");
-        return;
-      }
+        async function getPokedexNumber(pokemonName) {
+            const cleanName = cleanPokemonName(pokemonName);
+            const response = await fetch(`${POKEAPI_BASE}/pokemon/${cleanName}`);
+            if (!response.ok) return null;
+            const data = await response.json();
+            return data.id;
+        }
 
-      try {
-        const response = await fetch(`${POKEMONTCG_API_BASE}/cards?q=name:${name}`, {
-          headers: { "X-Api-Key": POKEMONTCG_API_KEY },
+        function cleanPokemonName(name) {
+            // Remove common prefixes
+            name = name.replace(/^(Lance's|Radiant|Dark|Shining|Rocket's|Team Magma's|Team Aqua's|Team Rocket's|Misty's|Brock's|Giovanni's|Galarian|Paldean|Alolan|Team Plasma's)\s+/i, '');
+            // Remove common suffixes
+            name = name.replace(/\s(EX|GX|VMAX|VSTAR|Tag Team|Lv\.X|BREAK|Prime|FB|G|GL|4|V-UNION|V)$/i, '');
+            // Normalize spaces and capitalization
+            return name.trim().toLowerCase();
+        }
+
+        document.getElementById("searchBtn").onclick = async () => {
+            const query = document.getElementById("searchInput").value.trim();
+            if (!query) return;
+
+            const cards = await searchCards(query);
+            if (cards.length === 0) {
+                alert("No cards found!");
+                return;
+            }
+
+            renderCards(cards);
+        };
+
+        function checkForEffects(text) {
+    const effects = {
+        score: 0,
+        details: []
+    };
+
+    if (!text) return effects;
+
+    text = text.toLowerCase();
+
+    // Check for deck search effects
+    if (text.includes("search your deck") && 
+        text.includes("pokémon") && 
+        text.includes("bench") && 
+        !text.includes("energy")) {
+        effects.score += 8;
+        effects.details.push("Call for Family (+8)");
+    }
+    else if (text.includes("search your deck")) {
+        effects.score += 4;
+        effects.details.push("Deck Search (+4)");
+    }
+
+    // Check for status conditions
+    if (text.includes("burned")) {
+        effects.score += 2;
+        effects.details.push("Burned Status (+2)");
+    }
+    if (text.includes("paralyzed")) {
+        effects.score += 2;
+        effects.details.push("Paralyzed Status (+2)");
+    }
+    if (text.includes("poisoned")) {
+        effects.score += 3;
+        effects.details.push("Poisoned Status (+3)");
+    }
+    if (text.includes("asleep") || text.includes("confused")) {
+        effects.score += 4;
+        effects.details.push("Asleep/Confused Status (+4)");
+    }
+
+    // Check for drawbacks
+    if (text.includes("damage to itself")) {
+        effects.score -= 2;
+        effects.details.push("Self Damage (-2)");
+    }
+
+    return effects;
+}
+
+// Main evaluation function
+function evaluateCard(card) {
+    if (!card || card.supertype !== "Pokémon") {
+        return { score: 0, details: ["Not a Pokémon card"], tier: "N/A" };
+    }
+
+    let score = 0;
+    let details = [];
+
+    // Calculate HP score
+    const hp = parseInt(card.hp) || 0;
+    let hpScore = 0;
+    if (hp >= 200) hpScore = 4;
+    else if (hp >= 120) hpScore = 3;
+    else if (hp >= 60) hpScore = 2;
+    else hpScore = -3;
+
+    score += hpScore;
+    details.push(`HP (${hp}): ${hpScore >= 0 ? '+' : ''}${hpScore}`);
+
+    // Calculate summon cost
+    const retreatCost = card.retreatCost ? card.retreatCost.length : 0;
+    const stage = card.subtypes && card.subtypes.includes("Stage 2") ? 2 :
+                 card.subtypes && card.subtypes.includes("Stage 1") ? 1 : 0;
+    const ruleBox = card.subtypes && card.subtypes.some(st => 
+        ['V', 'VMAX', 'VSTAR', 'GX', 'EX', 'MEGA'].includes(st)) ? 1 : 0;
+
+    const summonCost = Math.max(1, retreatCost + stage + ruleBox);
+    const summonScore = summonCost === 1 ? 3 : 
+                       summonCost === 2 ? 2 : 
+                       summonCost === 3 ? 1 : 
+                       summonCost === 4 ? 0 : -2;
+    
+    score += summonScore;
+    details.push(`Summon Cost (${summonCost}): ${summonScore >= 0 ? '+' : ''}${summonScore}`);
+
+    // Calculate attack scores
+    if (card.attacks) {
+        card.attacks.forEach(attack => {
+            let attackScore = 0;
+            let attackDetails = [];
+
+            // Check for effects
+            const effectResults = checkForEffects(attack.text);
+            attackScore += effectResults.score;
+            attackDetails = [...effectResults.details];
+
+            // Check damage
+            const damageStr = attack.damage || '';
+            if (damageStr && !damageStr.includes('+') && !damageStr.includes('×')) {
+                const damage = parseInt(damageStr);
+                if (damage >= 100) {
+                    attackScore += 3;
+                    attackDetails.push("High Damage (+3)");
+                } else if (damage >= 50) {
+                    attackScore += 2;
+                    attackDetails.push("Medium Damage (+2)");
+                }
+            }
+
+            score += attackScore;
+            if (attackDetails.length > 0) {
+                details.push(`Attack "${attack.name}": ${attackDetails.join(", ")}`);
+            }
         });
-        const data = await response.json();
-        renderSearchResults(data.data);
-      } catch (error) {
-        console.error("Error searching cards:", error);
-      }
     }
 
-    // Render Search Results
-    function renderSearchResults(cards) {
-      const carouselContainer = document.getElementById("carousel-container");
-      carouselContainer.innerHTML = "";
-
-      if (cards.length === 0) {
-        carouselContainer.innerHTML = "<p>No cards found. Try another search!</p>";
-        return;
-      }
-
-      cards.forEach((card) => {
-        const cardElement = document.createElement("div");
-        cardElement.classList.add("card");
-        cardElement.innerHTML = `
-          <img src="${card.images.small}" alt="${card.name}" />
-          <p>${card.name}</p>
-        `;
-        cardElement.addEventListener("click", () => displayCardDetails(card));
-        carouselContainer.appendChild(cardElement);
-      });
+    // Calculate abilities score
+    if (card.abilities) {
+        card.abilities.forEach(ability => {
+            const effectResults = checkForEffects(ability.text);
+            score += effectResults.score;
+            if (effectResults.details.length > 0) {
+                details.push(`Ability "${ability.name}": ${effectResults.details.join(", ")}`);
+            }
+        });
     }
 
-    // Start the App
-    initializeApp();
+    // Determine tier based on final score
+    let tier = "D";
+    if (score >= 10) tier = "S";
+    else if (score >= 8) tier = "A";
+    else if (score >= 5) tier = "B";
+    else if (score >= 3) tier = "C";
 
-  </script>
+    return {
+        score,
+        tier,
+        details
+    };
+}
+
+        //function to determine card type
+function determineCardType(card) {
+    if (!card) return null;
+
+    if (card.supertype === "Pokémon") {
+        if (card.subtypes && card.subtypes.some(st => 
+            ['V', 'VMAX', 'VSTAR'].some(v => st.includes(v)))) return "110";
+        if (card.subtypes && card.subtypes.includes("MEGA")) return "120";
+        if (card.subtypes && card.subtypes.includes("GX")) return "130";
+        if (card.subtypes && card.subtypes.includes("EX")) return "140";
+        if (card.subtypes && card.subtypes.includes("LV.X")) return "150";
+        if (card.subtypes && card.subtypes.includes("BREAK")) return "160";
+        if (card.subtypes && card.subtypes.includes("Prime")) return "170";
+        if (card.subtypes && card.subtypes.includes("Stage 2")) return "230";
+        if (card.subtypes && card.subtypes.includes("Stage 1")) return "220";
+        return "210"; // Basic Pokémon
+    }
+
+    if (card.supertype === "Trainer") {
+        if (card.subtypes && card.subtypes.includes("Item")) return "310";
+        if (card.subtypes && card.subtypes.includes("Tool")) return "320";
+        if (card.subtypes && card.subtypes.includes("Supporter")) return "330";
+        if (card.subtypes && card.subtypes.includes("Stadium")) return "340";
+        return "350"; // Old typeless  trainer cards
+    }
+
+    if (card.supertype === "Energy") {
+        return card.subtypes && card.subtypes.includes("Basic") ? "410" : "420";
+    }
+
+    return null;
+}
+
+    </script>
 </body>
 </html>
