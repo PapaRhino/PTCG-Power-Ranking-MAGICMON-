@@ -5,59 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pokémon Card Classifier</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 2rem;
+        /* Add your existing styles here */
+        .login-section {
+            margin-bottom: 1rem;
         }
-        #output {
+        .login-section input {
+            margin-right: 0.5rem;
+        }
+        .inventory-section {
             margin-top: 1rem;
-            padding: 1rem;
         }
-        .card {
-            display: inline-block;
-            text-align: center;
-            margin: 1rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 1rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-        }
-        .card img {
-            width: 150px;
-            height: auto;
-            border-radius: 5px;
-        }
-        .card-code {
-            margin-top: 0.5rem;
-            font-weight: bold;
-        }
-        #popup {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            justify-content: center;
-            align-items: center;
-        }
-        #popup img {
-            max-width: 90%;
-            max-height: 90%;
-            border-radius: 10px;
-        }
-        #popup button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
+        .inventory-section button {
+            margin-right: 0.5rem;
         }
     </style>
 </head>
@@ -65,128 +24,186 @@
     <h1>Pokémon Card Classifier</h1>
     <p>Enter a Pokémon card name to get its classification codes.</p>
 
-    <form id="cardForm">
-        <label for="cardName">Card Name:</label>
-        <input type="text" id="cardName" name="cardName" required>
-        <button type="submit">Search</button>
-    </form>
+    <!-- Login Section -->
+    <div class="login-section">
+        <label for="username">Username:</label>
+        <input type="text" id="username" placeholder="Enter your username">
+        <label for="password">Password:</label>
+        <input type="password" id="password" placeholder="Enter your password">
+        <button onclick="login()">Login</button>
+        <span id="loginStatus"></span>
+    </div>
 
-    <div id="output"></div>
+    <!-- Main App (Hidden until login) -->
+    <div id="app" style="display: none;">
+        <form id="cardForm">
+            <label for="cardName">Card Name:</label>
+            <input type="text" id="cardName" name="cardName" required>
+            <button type="submit">Search</button>
+        </form>
 
-    <div id="popup">
-        <button id="closePopup">Close</button>
-        <img id="popupImage" src="" alt="Card Image">
+        <div class="filters" id="filters">
+            <select id="typeFilter">
+                <option value="">Filter by Type</option>
+            </select>
+            <select id="cardTypeFilter">
+                <option value="">Filter by Card Type</option>
+            </select>
+            <select id="hpFilter">
+                <option value="">Filter by HP</option>
+            </select>
+            <select id="summonCostFilter">
+                <option value="">Filter by Summon Cost</option>
+            </select>
+            <select id="pokedexFilter">
+                <option value="">Filter by Pokédex Number</option>
+            </select>
+        </div>
+
+        <div class="pagination" style="margin: 1rem 0; text-align: center;">
+            <button id="prevPage" class="page-btn">&lt; Previous</button>
+            <span id="pageInfo" style="margin: 0 1rem;"></span>
+            <button id="nextPage" class="page-btn">Next &gt;</button>
+        </div>
+
+        <div id="output"></div>
+
+        <!-- Inventory Section -->
+        <div class="inventory-section">
+            <h2>Your Inventory</h2>
+            <div id="inventory"></div>
+        </div>
+
+        <div id="popup" class="popup" style="display: none;">
+            <button onclick="closePopup()">Close</button>
+            <img id="popupImage" src="" alt="Card Image">
+        </div>
     </div>
 
     <script>
-        const TCG_TYPE_CODES = {
-            Fire: "FIR",
-            Water: "WAT",
-            Grass: "GRA",
-            Lightning: "LIT",
-            Psychic: "PSY",
-            Fighting: "FIG",
-            Darkness: "DAR",
-            Metal: "MET",
-            Fairy: "FAI",
-            Dragon: "DRA",
-            Colorless: "COL",
+        let currentPage = 1;
+        const cardsPerPage = 20;
+        let totalCards = 0;
+        let currentUser = null;
+        let cardsData = [];
+
+        // Simple user credentials (for demo purposes)
+        const users = {
+            "user1": "password1", // Replace with your username and password
+            "user2": "password2"  // Replace with your wife's username and password
         };
 
-        document.getElementById("cardForm").addEventListener("submit", async (event) => {
-            event.preventDefault();
-
-            const cardName = document.getElementById("cardName").value.trim();
-            if (!cardName) {
-                alert("Please enter a card name.");
-                return;
+        // Check if user is already logged in
+        function checkLogin() {
+            const savedUser = localStorage.getItem("currentUser");
+            if (savedUser && users[savedUser]) {
+                currentUser = savedUser;
+                document.getElementById("app").style.display = "block";
+                document.getElementById("loginStatus").textContent = `Logged in as ${currentUser}`;
+                loadInventory();
             }
+        }
 
-            const output = document.getElementById("output");
-            output.textContent = "Fetching data...";
+        // Login function
+        function login() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
 
-            try {
-                // Fetch card data from pokemontcg.io
-                const cardResponse = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${cardName}"`);
-                const cardData = await cardResponse.json();
+            if (users[username] && users[username] === password) {
+                currentUser = username;
+                localStorage.setItem("currentUser", currentUser);
+                document.getElementById("app").style.display = "block";
+                document.getElementById("loginStatus").textContent = `Logged in as ${currentUser}`;
+                loadInventory();
+            } else {
+                alert("Invalid username or password.");
+            }
+        }
 
-                if (!cardData || !cardData.data || cardData.data.length === 0) {
-                    output.textContent = "No cards found.";
-                    return;
+        // Load inventory for the current user
+        function loadInventory() {
+            const inventory = JSON.parse(localStorage.getItem(`inventory_${currentUser}`)) || {};
+            const inventoryDiv = document.getElementById("inventory");
+            inventoryDiv.innerHTML = "<h3>Your Cards:</h3>";
+
+            for (const [cardName, count] of Object.entries(inventory)) {
+                const cardDiv = document.createElement("div");
+                cardDiv.textContent = `${cardName}: ${count}`;
+                inventoryDiv.appendChild(cardDiv);
+            }
+        }
+
+        // Add a card to the inventory
+        function addToInventory(cardName) {
+            const inventory = JSON.parse(localStorage.getItem(`inventory_${currentUser}`)) || {};
+            inventory[cardName] = (inventory[cardName] || 0) + 1;
+            localStorage.setItem(`inventory_${currentUser}`, JSON.stringify(inventory));
+            loadInventory();
+        }
+
+        // Remove a card from the inventory
+        function removeFromInventory(cardName) {
+            const inventory = JSON.parse(localStorage.getItem(`inventory_${currentUser}`)) || {};
+            if (inventory[cardName]) {
+                inventory[cardName] -= 1;
+                if (inventory[cardName] === 0) {
+                    delete inventory[cardName];
                 }
-
-                output.innerHTML = ""; // Clear output
-
-                cardData.data.forEach(async (card) => {
-                    // Fetch Pokédex number from PokeAPI
-                    let pokedexNumber = "000";
-                    try {
-                        const speciesResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${card.name.toLowerCase()}`);
-                        const speciesData = await speciesResponse.json();
-                        pokedexNumber = speciesData.id || "000";
-                    } catch (error) {
-                        console.warn(`Could not fetch Pokédex number for ${card.name}.`);
-                    }
-
-                    // Determine type code
-                    const typeCode = TCG_TYPE_CODES[card.types[0]] || "UNK";
-
-                    // Determine card type code
-                    const cardTypeCode = (() => {
-                        if (card.subtypes.includes("Basic")) return "BAS";
-                        if (card.subtypes.includes("Stage 1")) return "ST1";
-                        if (card.subtypes.includes("Stage 2")) return "ST2";
-                        if (card.supertype === "Pokémon" && card.rules) return "EX"; // Placeholder for EX/GX, refine as needed
-                        return "OTH";
-                    })();
-
-                    // Get HP
-                    const hp = card.hp ? card.hp.padStart(3, "0") : "000";
-
-                    // Calculate summon cost
-                    const retreatCost = card.retreatCost ? card.retreatCost.length : 0;
-                    const stageCost = card.subtypes.includes("Basic") ? 0 : card.subtypes.includes("Stage 1") ? 1 : 2;
-                    const ruleBoxCost = card.rules && card.rules.some(rule => rule.includes("prize card")) ? 1 : 0;
-                    const summonCost = Math.max(1, retreatCost + stageCost + ruleBoxCost).toString().padStart(3, "0");
-
-                    // Compile classification code
-                    const classificationCode = `${typeCode}.${cardTypeCode}.${hp}.${summonCost}.${pokedexNumber}`;
-
-                    // Create card display
-                    const cardDiv = document.createElement("div");
-                    cardDiv.className = "card";
-
-                    const cardImage = document.createElement("img");
-                    cardImage.src = card.images.small;
-                    cardImage.alt = card.name;
-
-                    const cardNameEl = document.createElement("div");
-                    cardNameEl.textContent = card.name;
-
-                    const cardCodeEl = document.createElement("div");
-                    cardCodeEl.className = "card-code";
-                    cardCodeEl.textContent = `Code: ${classificationCode}`;
-
-                    cardDiv.appendChild(cardImage);
-                    cardDiv.appendChild(cardNameEl);
-                    cardDiv.appendChild(cardCodeEl);
-
-                    cardDiv.addEventListener("click", () => {
-                        document.getElementById("popupImage").src = card.images.large;
-                        document.getElementById("popup").style.display = "flex";
-                    });
-
-                    output.appendChild(cardDiv);
-                });
-            } catch (error) {
-                console.error(error);
-                output.textContent = "An error occurred while fetching the card data.";
+                localStorage.setItem(`inventory_${currentUser}`, JSON.stringify(inventory));
+                loadInventory();
             }
-        });
+        }
 
-        document.getElementById("closePopup").addEventListener("click", () => {
-            document.getElementById("popup").style.display = "none";
-        });
+        // Render cards with inventory buttons
+        function renderCards(filteredCards) {
+            const output = document.getElementById("output");
+            output.innerHTML = "";
+
+            totalCards = filteredCards.length;
+            const totalPages = Math.ceil(totalCards / cardsPerPage);
+
+            const startIndex = (currentPage - 1) * cardsPerPage;
+            const endIndex = Math.min(startIndex + cardsPerPage, filteredCards.length);
+            const cardsToShow = filteredCards.slice(startIndex, endIndex);
+
+            cardsToShow.forEach(card => {
+                const cardDiv = document.createElement("div");
+                cardDiv.className = "card";
+
+                const cardImage = document.createElement("img");
+                cardImage.src = card.image;
+                cardImage.alt = card.name;
+                cardImage.addEventListener("click", () => openPopup(card.image));
+
+                const cardNameEl = document.createElement("div");
+                cardNameEl.textContent = card.name;
+
+                const cardCodeEl = document.createElement("div");
+                cardCodeEl.className = "card-code";
+                cardCodeEl.textContent = `Code: ${card.classificationCode}`;
+
+                const addButton = document.createElement("button");
+                addButton.textContent = "Add to Inventory";
+                addButton.addEventListener("click", () => addToInventory(card.name));
+
+                const removeButton = document.createElement("button");
+                removeButton.textContent = "Remove from Inventory";
+                removeButton.addEventListener("click", () => removeFromInventory(card.name));
+
+                cardDiv.appendChild(cardImage);
+                cardDiv.appendChild(cardNameEl);
+                cardDiv.appendChild(cardCodeEl);
+                cardDiv.appendChild(addButton);
+                cardDiv.appendChild(removeButton);
+
+                output.appendChild(cardDiv);
+            });
+        }
+
+        // Check login status on page load
+        checkLogin();
+
+        // Add your existing code for fetching and rendering cards here
     </script>
 </body>
 </html>
