@@ -5,141 +5,188 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pokémon Card Classifier</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .card-container { display: flex; flex-wrap: wrap; gap: 30px; margin-top: 20px; justify-content: center; }
-        .card { 
-            text-align: center; 
-            border: 2px solid #ccc; 
-            padding: 20px; 
-            border-radius: 10px; 
-            width: 300px; 
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
         }
-        .card:hover { 
-            transform: scale(1.05); 
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); 
+        #output {
+            margin-top: 1rem;
+            padding: 1rem;
         }
-        .card img { 
-            max-width: 200px; 
-            max-height: 200px; 
+        .card {
+            display: inline-block;
+            text-align: center;
+            margin: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
         }
-        .classification { 
-            font-weight: bold; 
-            color: #333; 
-            margin-top: 15px; 
-        }
-        #searchControls { margin-bottom: 20px; text-align: center; }
-        #searchInput { 
-            padding: 10px; 
-            font-size: 18px; 
-            width: 60%; 
-            max-width: 400px; 
-            border: 2px solid #ccc; 
+        .card img {
+            width: 150px;
+            height: auto;
             border-radius: 5px;
         }
-        #searchBtn { 
-            padding: 10px 20px; 
-            font-size: 18px; 
-            cursor: pointer; 
-            border: none; 
-            background-color: #007bff; 
-            color: white; 
-            border-radius: 5px;
-            margin-left: 10px;
-            transition: background-color 0.3s ease;
+        .card-code {
+            margin-top: 0.5rem;
+            font-weight: bold;
         }
-        #searchBtn:hover {
-            background-color: #0056b3;
+        #popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+        #popup img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 10px;
+        }
+        #popup button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">Pokémon Card Classifier</h1>
-    <div id="searchControls">
-        <input type="text" id="searchInput" placeholder="Enter card name..." />
-        <button id="searchBtn">Search</button>
+    <h1>Pokémon Card Classifier</h1>
+    <p>Enter a Pokémon card name to get its classification codes.</p>
+
+    <form id="cardForm">
+        <label for="cardName">Card Name:</label>
+        <input type="text" id="cardName" name="cardName" required>
+        <button type="submit">Search</button>
+    </form>
+
+    <div id="output"></div>
+
+    <div id="popup">
+        <button id="closePopup">Close</button>
+        <img id="popupImage" src="" alt="Card Image">
     </div>
 
-    <div class="card-container" id="cardContainer"></div>
-
     <script>
-        const POKEMONTCG_API_KEY = "your-api-key";
-        const POKEMONTCG_API_BASE = "https://api.pokemontcg.io/v2";
-        const POKEAPI_BASE = "https://pokeapi.co/api/v2";
+        const TCG_TYPE_CODES = {
+            Fire: "FIR",
+            Water: "WAT",
+            Grass: "GRA",
+            Lightning: "LIT",
+            Psychic: "PSY",
+            Fighting: "FIG",
+            Darkness: "DAR",
+            Metal: "MET",
+            Fairy: "FAI",
+            Dragon: "DRA",
+            Colorless: "COL",
+        };
 
-        async function searchCards(query) {
-            const tcgResponse = await fetch(`${POKEMONTCG_API_BASE}/cards?q=name:${query}`, {
-                headers: { "X-Api-Key": POKEMONTCG_API_KEY }
-            });
-            const tcgData = await tcgResponse.json();
-            return tcgData.data;
-        }
+        document.getElementById("cardForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
 
-        async function renderCards(cards) {
-            const container = document.getElementById("cardContainer");
-            container.innerHTML = ""; // Clear previous results
-
-            for (const card of cards) {
-                const cardDiv = document.createElement("div");
-                cardDiv.className = "card";
-
-                // Await the Pokedex number here
-                const pokedexNumber = await getPokedexNumber(card.name);
-                const powerTier = evaluateCard(card).tier;
-                const powerLevel = evaluateCard(card).score;
-                const cardType = determineCardType(card);
-                const classificationCode = `${powerTier}.${powerLevel}.${cardType}.${pokedexNumber || "9999"}`;
-                
-                cardDiv.innerHTML = `
-                    <img src="${card.images.large}" alt="${card.name}" />
-                    <p style="font-size: 20px; margin-top: 10px;">${card.name}</p>
-                    <div class="classification" id="classification-${card.id}">Code: ${classificationCode}</div>
-                `;
-                
-                container.appendChild(cardDiv);
-            }
-        }
-
-        async function getPokedexNumber(pokemonName) {
-            const cleanName = cleanPokemonName(pokemonName);
-            const response = await fetch(`${POKEAPI_BASE}/pokemon/${cleanName}`);
-            if (!response.ok) return null;
-            const data = await response.json();
-            return data.id;
-        }
-
-        function cleanPokemonName(name) {
-            // Remove common prefixes
-            name = name.replace(/^(Lance's|Radiant|Dark|Shining|Rocket's|Team Magma's|Team Aqua's|Team Rocket's|Misty's|Brock's|Giovanni's|Galarian|Paldean|Alolan|Team Plasma's)\s+/i, '');
-            // Remove common suffixes
-            name = name.replace(/\s(EX|GX|VMAX|VSTAR|Tag Team|Lv\.X|BREAK|Prime|FB|G|GL|4|V-UNION|V)$/i, '');
-            // Normalize spaces and capitalization
-            return name.trim().toLowerCase();
-        }
-
-        document.getElementById("searchBtn").onclick = async () => {
-            const query = document.getElementById("searchInput").value.trim();
-            if (!query) return;
-
-            const cards = await searchCards(query);
-            if (cards.length === 0) {
-                alert("No cards found!");
+            const cardName = document.getElementById("cardName").value.trim();
+            if (!cardName) {
+                alert("Please enter a card name.");
                 return;
             }
 
-            renderCards(cards);
-        };
+            const output = document.getElementById("output");
+            output.textContent = "Fetching data...";
 
-        function evaluateCard(card) {
-            // Example evaluation function (same as before)
-            return { score: Math.floor(Math.random() * 10), tier: "A" };
-        }
+            try {
+                // Fetch card data from pokemontcg.io
+                const cardResponse = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${cardName}"`);
+                const cardData = await cardResponse.json();
 
-        function determineCardType(card) {
-            // Example card type determination (same as before)
-            return "210";
-        }
+                if (!cardData || !cardData.data || cardData.data.length === 0) {
+                    output.textContent = "No cards found.";
+                    return;
+                }
+
+                output.innerHTML = ""; // Clear output
+
+                cardData.data.forEach(async (card) => {
+                    // Fetch Pokédex number from PokeAPI
+                    let pokedexNumber = "000";
+                    try {
+                        const speciesResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${card.name.toLowerCase()}`);
+                        const speciesData = await speciesResponse.json();
+                        pokedexNumber = speciesData.id || "000";
+                    } catch (error) {
+                        console.warn(`Could not fetch Pokédex number for ${card.name}.`);
+                    }
+
+                    // Determine type code
+                    const typeCode = TCG_TYPE_CODES[card.types[0]] || "UNK";
+
+                    // Determine card type code
+                    const cardTypeCode = (() => {
+                        if (card.subtypes.includes("Basic")) return "BAS";
+                        if (card.subtypes.includes("Stage 1")) return "ST1";
+                        if (card.subtypes.includes("Stage 2")) return "ST2";
+                        if (card.supertype === "Pokémon" && card.rules) return "EX"; // Placeholder for EX/GX, refine as needed
+                        return "OTH";
+                    })();
+
+                    // Get HP
+                    const hp = card.hp ? card.hp.padStart(3, "0") : "000";
+
+                    // Calculate summon cost
+                    const retreatCost = card.retreatCost ? card.retreatCost.length : 0;
+                    const stageCost = card.subtypes.includes("Basic") ? 0 : card.subtypes.includes("Stage 1") ? 1 : 2;
+                    const ruleBoxCost = card.rules && card.rules.some(rule => rule.includes("prize card")) ? 1 : 0;
+                    const summonCost = Math.max(1, retreatCost + stageCost + ruleBoxCost).toString().padStart(3, "0");
+
+                    // Compile classification code
+                    const classificationCode = `${typeCode}.${cardTypeCode}.${hp}.${summonCost}.${pokedexNumber}`;
+
+                    // Create card display
+                    const cardDiv = document.createElement("div");
+                    cardDiv.className = "card";
+
+                    const cardImage = document.createElement("img");
+                    cardImage.src = card.images.small;
+                    cardImage.alt = card.name;
+
+                    const cardNameEl = document.createElement("div");
+                    cardNameEl.textContent = card.name;
+
+                    const cardCodeEl = document.createElement("div");
+                    cardCodeEl.className = "card-code";
+                    cardCodeEl.textContent = `Code: ${classificationCode}`;
+
+                    cardDiv.appendChild(cardImage);
+                    cardDiv.appendChild(cardNameEl);
+                    cardDiv.appendChild(cardCodeEl);
+
+                    cardDiv.addEventListener("click", () => {
+                        document.getElementById("popupImage").src = card.images.large;
+                        document.getElementById("popup").style.display = "flex";
+                    });
+
+                    output.appendChild(cardDiv);
+                });
+            } catch (error) {
+                console.error(error);
+                output.textContent = "An error occurred while fetching the card data.";
+            }
+        });
+
+        document.getElementById("closePopup").addEventListener("click", () => {
+            document.getElementById("popup").style.display = "none";
+        });
     </script>
 </body>
 </html>
